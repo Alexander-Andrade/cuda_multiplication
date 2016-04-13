@@ -167,24 +167,20 @@ int main(){
 	//begin measurements for host to device copy
 	float millisec;
 	CudaEventSyncTimer cuda_timer;
+	Timer cpu_timer;
+
 	cuda_timer.start();
 	//The data transfers between the host and device using cudaMemcpy() are synchronous 
 	cudaMemcpy(v1_dev, v1_host, b_vec_size, cudaMemcpyHostToDevice);
 	millisec = cuda_timer.sync_stop();
 	cout << "host to device v1 time(ms) : "<< millisec ;
 	cout << setw(40) << "bandwidth (MB/s) : " << calc_bandwidth(b_vec_size, millisec / 1000) << endl;
-	//cout << "real sec : " << (double)(clock() - t1)/CLOCKS_PER_SEC << endl;
-	//cout << "host to device v1 time(s) : " << t.clock_diff() << endl;
-	
 
-	//t.start();
 	cuda_timer.start();
 	cudaMemcpy(v2_dev, v2_host, b_vec_size, cudaMemcpyHostToDevice);
 	millisec = cuda_timer.sync_stop();
 	cout << "host to device v2 time(ms) : " << millisec;
 	cout << setw(40) << "bandwidth (MB/s) : " << calc_bandwidth(b_vec_size, millisec / 1000) << endl;
-	//cout << "host to device v2 time(s) : " << t.clock_diff() << endl;
-
 
 	//set kernel launch config
 	dim3 n_threads = dim3(1024);
@@ -194,15 +190,13 @@ int main(){
 	cout << "blocks per grid : " << n_blocks.x << endl;
 	
 	//measure cuda multiplication
-	//t.start();
-	
 	cuda_timer.start();
 	//Kernel launches, on the other hand, are asynchronous.
 	cuda_mul_kern <<<n_blocks, n_threads>>>(v1_dev, v2_dev, res_dev);
 	//block CPU execution until all previously issued commands on the device have completed
 	cudaDeviceSynchronize();
-	cout << "kernel time(ms) : " << cuda_timer.sync_stop() << endl;
-	//cout << "kernel time(ms) : " << t.clock_diff() << endl;
+	millisec = cuda_timer.sync_stop();
+	cout << "kernel time(ms) : " << millisec << endl;
 	
 	cuda_timer.start();
 	cudaMemcpy(res_host,res_dev,b_vec_size,cudaMemcpyDeviceToHost);
@@ -210,21 +204,16 @@ int main(){
 	cout << "device to host result time(ms) : " << millisec;
 	cout << setw(40) << "bandwidth (MB/s) : " << calc_bandwidth(b_vec_size, millisec / 1000) << endl;
 	
-	//sequential multiplication
-	Timer timer;
-	double time;
-	timer.start();
+	cpu_timer.start();
 	sequential_mul(v1_host,v2_host,res_sequential,vec_size);
-	time = timer.time_diff();
+	double time = cpu_timer.time_diff();
 	cout << "sequential mul time (ms) : " << time * 1000 << endl;
 
 	//write cuda result
-	fstream file("cuda_result.txt");
+	//fstream file;
 	//file.open("cuda_result.txt", ios::out | ios::trunc);
-	write_vec(res_host, vec_size, file);
-	file.close();
-
-
+	//write_vec(res_host, vec_size, file);
+	//file.close();
 
 	//free resources
 	cudaFree(v1_dev);
